@@ -6,7 +6,9 @@ class Api_handler:
 
     def get_match_history(self,puuid):
         """Get match history for a player."""
-        url = f"https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=420"
+        current_time = int(time.time())
+        two_weeks_ago = current_time - (14 * 24 * 60 * 60)
+        url = f"https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=420&startTime={two_weeks_ago}"
         headers = {
             "X-Riot-Token": self.API_KEY
         }
@@ -40,7 +42,7 @@ class Api_handler:
     
     def get_rank_info(self,puuid):
         """Get summoner information for a player."""
-        url = f"https://europe.api.riotgames.com/lol/league/v4/entries/by-puuid/{puuid}"
+        url = f"https://euw1.api.riotgames.com/lol/league/v4/entries/by-puuid/{puuid}"
         headers = {
             "X-Riot-Token": self.API_KEY
         }
@@ -50,3 +52,7 @@ class Api_handler:
         elif response.status_code == 429:
             print("Rate limit exceeded. Waiting for 1 seconds...")
             time.sleep(1)
+            return self.get_rank_info(puuid)
+        else:
+            print(f"Error getting rank information: {response.text}")
+            return None

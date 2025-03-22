@@ -6,70 +6,63 @@ class TableHandler:
 
 
     def create_tables(self):
-
         cur = self.conn.cursor()
         try:
             cur.execute("""
-                    CREATE TABLE IF NOT EXISTS summoners (
-                        puuid VARCHAR(255) PRIMARY KEY,
-                        name VARCHAR(255),
-                        tagline VARCHAR(255),
-                        tier VARCHAR(255),
-                        rank VARCHAR(255),
-                        lp INTEGER,
-                        wins INTEGER,
-                        losses INTEGER,
-
-                    );
-                """)
+                CREATE TABLE IF NOT EXISTS summoners (
+                    puuid VARCHAR(255) PRIMARY KEY,
+                    name VARCHAR(255),
+                    tagline VARCHAR(255),
+                    tier VARCHAR(255),
+                    rank VARCHAR(255),
+                    lp INTEGER,
+                    wins INTEGER,
+                    losses INTEGER
+                );
+            """)
             print("Table 'summoners' created successfully.")
 
-            # Create `matches` table
-            
             cur.execute("""
-                        CREATE TABLE if not exists match_data (
-            match_id VARCHAR(255),
-            puuid_1 VARCHAR(255),
-            champion_1 VARCHAR(255),
-            puuid_2 VARCHAR(255),
-            champion_2 VARCHAR(255),
-            puuid_3 VARCHAR(255),
-            champion_3 VARCHAR(255),
-            puuid_4 VARCHAR(255),
-            champion_4 VARCHAR(255),
-            puuid_5 VARCHAR(255),
-            champion_5 VARCHAR(255),
-            puuid_6 VARCHAR(255),
-            champion_6 VARCHAR(255),
-            puuid_7 VARCHAR(255),
-            champion_7 VARCHAR(255),
-            puuid_8 VARCHAR(255),
-            champion_8 VARCHAR(255),
-            puuid_9 VARCHAR(255),
-            champion_9 VARCHAR(255),
-            puuid_10 VARCHAR(255),
-            champion_10 VARCHAR(255)
-            FOREIGN KEY (puuid_1) REFERENCES summoners(puuid) ON DELETE CASCADE,
-            FOREIGN KEY (puuid_2) REFERENCES summoners(puuid) ON DELETE CASCADE,
-            FOREIGN KEY (puuid_3) REFERENCES summoners(puuid) ON DELETE CASCADE,
-            FOREIGN KEY (puuid_4) REFERENCES summoners(puuid) ON DELETE CASCADE,
-            FOREIGN KEY (puuid_5) REFERENCES summoners(puuid) ON DELETE CASCADE,
-            FOREIGN KEY (puuid_6) REFERENCES summoners(puuid) ON DELETE CASCADE,
-            FOREIGN KEY (puuid_7) REFERENCES summoners(puuid) ON DELETE CASCADE,
-            FOREIGN KEY (puuid_8) REFERENCES summoners(puuid) ON DELETE CASCADE,
-            FOREIGN KEY (puuid_9) REFERENCES summoners(puuid) ON DELETE CASCADE,
-            FOREIGN KEY (puuid_10) REFERENCES summoners(puuid) ON DELETE CASCADE
-                        );
-                        """)
-            print("Table 'match_table' created successfully.")
-            # Commit changes and close connection
+                CREATE TABLE IF NOT EXISTS match_data (
+                    match_id VARCHAR(255),
+                    puuid1 VARCHAR(255),
+                    champion1 VARCHAR(255),
+                    puuid2 VARCHAR(255),
+                    champion2 VARCHAR(255),
+                    puuid3 VARCHAR(255),
+                    champion3 VARCHAR(255),
+                    puuid4 VARCHAR(255),
+                    champion4 VARCHAR(255),
+                    puuid5 VARCHAR(255),
+                    champion5 VARCHAR(255),
+                    puuid6 VARCHAR(255),
+                    champion6 VARCHAR(255),
+                    puuid7 VARCHAR(255),
+                    champion7 VARCHAR(255),
+                    puuid8 VARCHAR(255),
+                    champion8 VARCHAR(255),
+                    puuid9 VARCHAR(255),
+                    champion9 VARCHAR(255),
+                    puuid10 VARCHAR(255),
+                    champion10 VARCHAR(255),
+                    FOREIGN KEY (puuid1) REFERENCES summoners(puuid) ON DELETE CASCADE,
+                    FOREIGN KEY (puuid2) REFERENCES summoners(puuid) ON DELETE CASCADE,
+                    FOREIGN KEY (puuid3) REFERENCES summoners(puuid) ON DELETE CASCADE,
+                    FOREIGN KEY (puuid4) REFERENCES summoners(puuid) ON DELETE CASCADE,
+                    FOREIGN KEY (puuid5) REFERENCES summoners(puuid) ON DELETE CASCADE,
+                    FOREIGN KEY (puuid6) REFERENCES summoners(puuid) ON DELETE CASCADE,
+                    FOREIGN KEY (puuid7) REFERENCES summoners(puuid) ON DELETE CASCADE,
+                    FOREIGN KEY (puuid8) REFERENCES summoners(puuid) ON DELETE CASCADE,
+                    FOREIGN KEY (puuid9) REFERENCES summoners(puuid) ON DELETE CASCADE,
+                    FOREIGN KEY (puuid10) REFERENCES summoners(puuid) ON DELETE CASCADE
+                );
+            """)
+            print("Table 'match_data' created successfully.")
             self.conn.commit()
             cur.close()
-
         except Exception as e:
             print(f"Error creating tables: {e}")
             sys.exit(1)
-
 
 
 
@@ -137,16 +130,16 @@ class TableHandler:
                 puuid10, champion10
                 
             ) VALUES (
-                %s, %s, %s, %s,
                 %s, %s, %s,
-                %s, %s, %s,
-                %s, %s, %s,
-                %s, %s, %s,
-                %s, %s, %s,
-                %s, %s, %s,
-                %s, %s, %s,
-                %s, %s, %s,
-                %s, %s, %s
+                %s, %s, 
+                %s, %s, 
+                %s, %s, 
+                %s, %s, 
+                %s, %s, 
+                %s, %s, 
+                %s, %s, 
+                %s, %s, 
+                %s, %s
             )
         """, (
             match_id,
@@ -164,5 +157,46 @@ class TableHandler:
         
         ))
         self.conn.commit()
+    
+    def save_summoner_data_to_db(self, rank_info,puuid,name,tagline):
+        """Save summoner data to a PostgreSQL table."""
+        cursor = self.conn.cursor()
+        if len(rank_info) != 0:
+            
+            cursor.execute("""
+                INSERT INTO summoners (
+                    puuid, name, tagline, tier, rank, lp, wins, losses
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s
+                )
+            """, (
+                puuid, name, tagline, rank_info[0]['tier'], rank_info[0]['rank'], rank_info[0]['leaguePoints'], rank_info[0]['wins'], rank_info[0]['losses']
+            ))
+        else:
+            cursor.execute("""
+                INSERT INTO summoners (
+                    puuid, name, tagline
+                ) VALUES (
+                    %s, %s, %s
+                )
+            """, (
+                puuid, name, tagline
+            ))
+        self.conn.commit()
 
 
+    def check_if_summoner_in_db(self, puuid):
+        """Check if a summoner is already in the database."""
+        cursor = self.conn.cursor()
+        cursor.execute(f"SELECT 1 FROM summoners WHERE puuid = '{puuid}'")
+        exists = cursor.fetchone()
+        cursor.close()
+        return exists
+
+    def check_if_match_in_db(self, match_id):
+        """Check if a match is already in the database."""
+        cursor = self.conn.cursor()
+        cursor.execute(f"SELECT 1 FROM match_data WHERE match_id = '{match_id}'")
+        exists = cursor.fetchone()
+        cursor.close()
+        return exists
