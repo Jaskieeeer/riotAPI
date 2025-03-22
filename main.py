@@ -7,7 +7,7 @@ import time
 import psycopg2
 import json
 
-with open("api.txt", "r") as f:
+with open("./passy/api.txt", "r") as f:
     API_KEY = f.read().strip() 
 
 def write_to_json(data):
@@ -42,12 +42,12 @@ if __name__ == "__main__":
     table_handler.show_table( "match_data")
     j=0
     try:
-        while not summonerqueue.empty() and j < 1000:
+        while not summonerqueue.empty() and i < 50:
             
             summoner = summonerqueue.get()
             for id in api_handler.get_match_history(summoner):
                 matchqueue.put(id)
-            while not matchqueue.empty() and i < 100:
+            while not matchqueue.empty() and i < 50:
                 match = matchqueue.get()
                 if not table_handler.check_if_match_in_db(match):
                     match_data = api_handler.get_match_info(match)

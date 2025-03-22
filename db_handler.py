@@ -13,7 +13,7 @@ def create_database():
     print(f"System Encoding: {locale.getpreferredencoding()}")
 
     # Read password securely
-    with open("passy.txt", "r") as f:
+    with open("./passy/passy.txt", "r") as f:
         DB_PASSWORD = f.read().strip()  # Strip newline characters
 
     # Database connection parameters
@@ -57,7 +57,7 @@ def create_database():
 
 def connect_database():
     """Connects to the PostgreSQL database."""
-    with open("passy.txt", "r") as f:
+    with open("./passy/passy.txt", "r") as f:
         DB_PASSWORD = f.read().strip()  # Strip newline characters
 
     # Database connection parameters

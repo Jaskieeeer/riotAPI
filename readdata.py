@@ -1,11 +1,12 @@
+import db_handler
 import psycopg2
 import sys
-
+import pandas as pd
 def connect_database():
     """Connects to the PostgreSQL database."""
-    with open("passy.txt", "r") as f:
-        DB_PASSWORD = f.read().strip()  # Strip newline characters
-
+    with open("./passy/passy.txt", "r") as f:
+        DB_PASSWORD = f.read().strip()
+        
     # Database connection parameters
     DB_NAME = "ritoapi_db"
     DB_USER = "postgres"
@@ -24,5 +25,10 @@ def connect_database():
     except Exception as e:
         print(f"Error connecting to database: {e}")
         sys.exit(1)
-connect_database()
+conn = connect_database()
+query = ("SELECT * FROM summoners")
+df = pd.read_sql(query, conn)
 
+sorted_df_desc = df.sort_values(by='tier', ascending=False)
+print(sorted_df_desc)
+conn.close()
