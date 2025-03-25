@@ -6,6 +6,20 @@ from api_handler import Api_handler
 import time
 import psycopg2
 import json
+import signal
+import sys
+
+
+def cleanup (signal, frame):
+    print("Cleaning up")
+    try:
+            if conn:
+                conn.close()
+                print("Database connection closed.")
+    except NameError:
+        print("No database connection to close.")
+    sys.exit(0)
+signal.signal(signal.SIGINT, cleanup)
 
 with open("./passy/api.txt", "r") as f:
     API_KEY = f.read().strip() 
@@ -21,11 +35,12 @@ def queue_print(queue):
 
 
 if __name__ == "__main__":
+    api_handler = Api_handler(API_KEY)
     conn = connect_database()
     summonerqueue = Queue()
     matchqueue = Queue()
     table_handler = TableHandler(conn)
-    api_handler = Api_handler(API_KEY)
+    
     summoner_name = "612V7U02pa_cGWxqGzWJpb7rB6xxU8By-kn4YFsLC-uOT56MaCTIjJKXblqkStWnlHz_CYO64JLltg"
     
     i = 0
@@ -42,12 +57,12 @@ if __name__ == "__main__":
     table_handler.show_table( "match_data")
     j=0
     try:
-        while not summonerqueue.empty() and i < 50:
+        while not summonerqueue.empty():
             
             summoner = summonerqueue.get()
             for id in api_handler.get_match_history(summoner):
                 matchqueue.put(id)
-            while not matchqueue.empty() and i < 50:
+            while not matchqueue.empty():
                 match = matchqueue.get()
                 if not table_handler.check_if_match_in_db(match):
                     match_data = api_handler.get_match_info(match)
@@ -71,6 +86,8 @@ if __name__ == "__main__":
             
         table_handler.show_table("match_data")
         table_handler.show_table("summoners")
+    except KeyboardInterrupt:
+        cleanup(None, None)
     except Exception as e:
         print(e)
     finally:

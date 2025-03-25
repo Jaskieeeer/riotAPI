@@ -8,7 +8,7 @@ class Api_handler:
         """Get match history for a player."""
         current_time = int(time.time())
         two_weeks_ago = current_time - (14 * 24 * 60 * 60)
-        url = f"https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=420&startTime={two_weeks_ago}"
+        url = f"https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=420&startTime={two_weeks_ago}&count=100"
         headers = {
             "X-Riot-Token": self.API_KEY
         }

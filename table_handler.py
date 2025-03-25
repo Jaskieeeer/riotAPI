@@ -45,6 +45,7 @@ class TableHandler:
                     champion9 VARCHAR(255),
                     puuid10 VARCHAR(255),
                     champion10 VARCHAR(255),
+                    winner INTEGER,
                     FOREIGN KEY (puuid1) REFERENCES summoners(puuid) ON DELETE CASCADE,
                     FOREIGN KEY (puuid2) REFERENCES summoners(puuid) ON DELETE CASCADE,
                     FOREIGN KEY (puuid3) REFERENCES summoners(puuid) ON DELETE CASCADE,
@@ -116,6 +117,12 @@ class TableHandler:
 
         match_id = match['metadata']['matchId']
         players = match['info']['participants']
+        if players[0]['win']:
+            winner = 1
+        elif players[5]['win']:
+            winner = 2
+        else:
+            winner = 0
         cursor.execute("""
             INSERT INTO match_data (
                 match_id, puuid1, champion1,
@@ -127,8 +134,8 @@ class TableHandler:
                 puuid7, champion7,
                 puuid8, champion8,
                 puuid9, champion9,
-                puuid10, champion10
-                
+                puuid10, champion10,
+                winner
             ) VALUES (
                 %s, %s, %s,
                 %s, %s, 
@@ -139,7 +146,7 @@ class TableHandler:
                 %s, %s, 
                 %s, %s, 
                 %s, %s, 
-                %s, %s
+                %s, %s, %s
             )
         """, (
             match_id,
@@ -152,9 +159,7 @@ class TableHandler:
             players[6]['puuid'], players[6]['championName'],
             players[7]['puuid'], players[7]['championName'],
             players[8]['puuid'], players[8]['championName'],
-            players[9]['puuid'], players[9]['championName'],
-
-        
+            players[9]['puuid'], players[9]['championName'],winner
         ))
         self.conn.commit()
     

@@ -1,4 +1,3 @@
-import db_handler
 import psycopg2
 import sys
 import pandas as pd
@@ -27,8 +26,12 @@ def connect_database():
         sys.exit(1)
 conn = connect_database()
 query = ("SELECT * FROM summoners")
-df = pd.read_sql(query, conn)
 
+df = pd.read_sql(query, conn)
+query2 = ("SELECT * FROM match_data")
+df2 = pd.read_sql(query2, conn)
+print(df)
+print(df2)
 sorted_df_desc = df.sort_values(by='tier', ascending=False)
 print(sorted_df_desc)
 conn.close()
