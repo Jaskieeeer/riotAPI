@@ -26,12 +26,35 @@ def connect_database():
         sys.exit(1)
 conn = connect_database()
 query = ("SELECT * FROM summoners")
+def count_divisions():
+    query = ("SELECT tier, COUNT(*) FROM summoners GROUP BY tier")
+    df = pd.read_sql(query, conn)
+    print(df)
+count_divisions()
+
+def save_data_to_csv():
+    query = ("SELECT * FROM summoners")
+    df = pd.read_sql(query, conn)
+    df.to_csv("summoners.csv")
+
+def save_match_data_to_csv():
+    query = ("SELECT * FROM match_data")
+    df = pd.read_sql(query, conn)
+    df.to_csv("match_data.csv")
+
+def save_match_participants_to_csv():
+    query = ("SELECT * FROM match_participants")
+    df = pd.read_sql(query, conn)
+    df.to_csv("match_participants.csv")
 
 df = pd.read_sql(query, conn)
 query2 = ("SELECT * FROM match_data")
 df2 = pd.read_sql(query2, conn)
+df3 = pd.read_sql("SELECT * FROM match_participants", conn)
 print(df)
 print(df2)
-sorted_df_desc = df.sort_values(by='tier', ascending=False)
-print(sorted_df_desc)
+print(df3)
+save_data_to_csv()
+save_match_data_to_csv()
+save_match_participants_to_csv()
 conn.close()

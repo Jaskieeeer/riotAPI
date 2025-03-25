@@ -17,48 +17,41 @@ class TableHandler:
                     rank VARCHAR(255),
                     lp INTEGER,
                     wins INTEGER,
-                    losses INTEGER
+                    losses INTEGER,
+                    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             """)
             print("Table 'summoners' created successfully.")
 
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS match_data (
-                    match_id VARCHAR(255),
-                    puuid1 VARCHAR(255),
-                    champion1 VARCHAR(255),
-                    puuid2 VARCHAR(255),
-                    champion2 VARCHAR(255),
-                    puuid3 VARCHAR(255),
-                    champion3 VARCHAR(255),
-                    puuid4 VARCHAR(255),
-                    champion4 VARCHAR(255),
-                    puuid5 VARCHAR(255),
-                    champion5 VARCHAR(255),
-                    puuid6 VARCHAR(255),
-                    champion6 VARCHAR(255),
-                    puuid7 VARCHAR(255),
-                    champion7 VARCHAR(255),
-                    puuid8 VARCHAR(255),
-                    champion8 VARCHAR(255),
-                    puuid9 VARCHAR(255),
-                    champion9 VARCHAR(255),
-                    puuid10 VARCHAR(255),
-                    champion10 VARCHAR(255),
-                    winner INTEGER,
-                    FOREIGN KEY (puuid1) REFERENCES summoners(puuid) ON DELETE CASCADE,
-                    FOREIGN KEY (puuid2) REFERENCES summoners(puuid) ON DELETE CASCADE,
-                    FOREIGN KEY (puuid3) REFERENCES summoners(puuid) ON DELETE CASCADE,
-                    FOREIGN KEY (puuid4) REFERENCES summoners(puuid) ON DELETE CASCADE,
-                    FOREIGN KEY (puuid5) REFERENCES summoners(puuid) ON DELETE CASCADE,
-                    FOREIGN KEY (puuid6) REFERENCES summoners(puuid) ON DELETE CASCADE,
-                    FOREIGN KEY (puuid7) REFERENCES summoners(puuid) ON DELETE CASCADE,
-                    FOREIGN KEY (puuid8) REFERENCES summoners(puuid) ON DELETE CASCADE,
-                    FOREIGN KEY (puuid9) REFERENCES summoners(puuid) ON DELETE CASCADE,
-                    FOREIGN KEY (puuid10) REFERENCES summoners(puuid) ON DELETE CASCADE
+                match_id VARCHAR(255) PRIMARY KEY,
+                duration INTEGER, -- Match duration in seconds
+                winner_team INTEGER, -- 1 or 2 (Blue or Red)
+                match_date TIMESTAMP 
                 );
             """)
             print("Table 'match_data' created successfully.")
+            cur.execute("""
+                    CREATE TABLE IF NOT EXISTS match_participants (
+                    match_id VARCHAR(255),
+                    puuid VARCHAR(255),
+                    champion VARCHAR(255),
+                    team INTEGER, -- 1 (Blue) or 2 (Red)
+                    role VARCHAR(50), -- Top, Jungle, Mid, Bot, Support
+                    kills INTEGER,
+                    deaths INTEGER,
+                    assists INTEGER,
+                    damage_dealt INTEGER,
+                    gold_earned INTEGER,
+                    cs INTEGER, -- Creep score
+                    vision_score INTEGER,
+                    PRIMARY KEY (match_id, puuid),
+                    FOREIGN KEY (match_id) REFERENCES match_data(match_id) ON DELETE CASCADE,
+                    FOREIGN KEY (puuid) REFERENCES summoners(puuid) ON DELETE CASCADE
+                );
+            """)
+            print("Table 'match_participants' created successfully.")
             self.conn.commit()
             cur.close()
         except Exception as e:
@@ -116,51 +109,31 @@ class TableHandler:
         cursor = self.conn.cursor()
 
         match_id = match['metadata']['matchId']
-        players = match['info']['participants']
-        if players[0]['win']:
-            winner = 1
-        elif players[5]['win']:
-            winner = 2
-        else:
-            winner = 0
+        participants = match['info']['participants']
+        duration = match['info']['gameDuration']
+        match_date = match['info']['gameCreation']/1000
+        winner_team = 1 if participants[0]['win'] else (2 if participants[5]['win'] else 0)
         cursor.execute("""
-            INSERT INTO match_data (
-                match_id, puuid1, champion1,
-                puuid2, champion2,
-                puuid3, champion3,
-                puuid4, champion4,
-                puuid5, champion5,
-                puuid6, champion6,
-                puuid7, champion7,
-                puuid8, champion8,
-                puuid9, champion9,
-                puuid10, champion10,
-                winner
-            ) VALUES (
-                %s, %s, %s,
-                %s, %s, 
-                %s, %s, 
-                %s, %s, 
-                %s, %s, 
-                %s, %s, 
-                %s, %s, 
-                %s, %s, 
-                %s, %s, 
-                %s, %s, %s
-            )
-        """, (
-            match_id,
-            players[0]['puuid'], players[0]['championName'],
-            players[1]['puuid'], players[1]['championName'],
-            players[2]['puuid'], players[2]['championName'],
-            players[3]['puuid'], players[3]['championName'],
-            players[4]['puuid'], players[4]['championName'],
-            players[5]['puuid'], players[5]['championName'],
-            players[6]['puuid'], players[6]['championName'],
-            players[7]['puuid'], players[7]['championName'],
-            players[8]['puuid'], players[8]['championName'],
-            players[9]['puuid'], players[9]['championName'],winner
-        ))
+        INSERT INTO match_data (match_id,  duration, winner_team, match_date)
+        VALUES (%s, %s, %s, to_timestamp(%s))
+        ON CONFLICT (match_id) DO NOTHING
+    """, (match_id, duration, winner_team,match_date))
+        for player in participants:
+            cursor.execute("""
+                INSERT INTO match_participants (
+                    match_id, puuid, champion, team, role, 
+                    kills, deaths, assists, damage_dealt, gold_earned, cs, vision_score
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (match_id, puuid) DO NOTHING
+            """, (
+                match_id, player['puuid'], player['championName'], 
+                1 if player['teamId'] == 100 else 2,  
+                player.get('individualPosition', 'UNKNOWN'),
+                player['kills'], player['deaths'], player['assists'],
+                player['totalDamageDealtToChampions'], player['goldEarned'],
+                player['totalMinionsKilled'] + player['neutralMinionsKilled'],
+                player.get('visionScore', 0)
+            ))
         self.conn.commit()
     
     def save_summoner_data_to_db(self, rank_info,puuid,name,tagline):
