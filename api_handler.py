@@ -56,3 +56,4 @@ class Api_handler:
         else:
             print(f"Error getting rank information: {response.text}")
             return None
+        

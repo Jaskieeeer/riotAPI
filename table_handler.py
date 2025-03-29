@@ -51,14 +51,60 @@ class TableHandler:
                     FOREIGN KEY (puuid) REFERENCES summoners(puuid) ON DELETE CASCADE
                 );
             """)
-            print("Table 'match_participants' created successfully.")
+            cur.execute("""
+                        CREATE TABLE IF NOT EXISTS champion_stats (
+                        champion VARCHAR(255),
+                        role VARCHAR(50),
+                        games_played INTEGER,
+                        win_rate FLOAT,
+                        avg_kda FLOAT,
+                        avg_cs_per_min FLOAT,
+                        avg_gold_per_min FLOAT,
+                        avg_vision_score FLOAT,
+                        PRIMARY KEY (champion, role)
+
+                );  
+                        """)
+            print("Table 'champion matchups' created successfully.")
+            
             self.conn.commit()
             cur.close()
         except Exception as e:
             print(f"Error creating tables: {e}")
             sys.exit(1)
 
+    def populate_champion_stats(self):
+        """Populate champion stats based on match data."""
+        cur = self.conn.cursor()
 
+        try:
+            cur.execute("""
+                DROP TABLE IF EXISTS champion_stats ;
+            """)
+            self.create_tables()
+            cur.execute("""
+                INSERT INTO champion_stats (champion, role, games_played, win_rate, avg_kda, avg_cs_per_min, avg_gold_per_min, avg_vision_score)
+                SELECT 
+                    champion,
+                    role,
+                    COUNT(*) AS games_played,
+                    SUM(CASE WHEN winner_team = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS win_rate,
+                    AVG((kills + assists) / NULLIF(deaths, 0)) AS avg_kda,
+                    AVG(cs::FLOAT / (duration / 60.0)) AS avg_cs_per_min,
+                    AVG(gold_earned::FLOAT / (duration / 60.0)) AS avg_gold_per_min,
+                    AVG(vision_score) AS avg_vision_score
+                FROM match_participants
+                JOIN match_data ON match_participants.match_id = match_data.match_id
+                WHERE ROLE != 'Invalid'
+                GROUP BY champion, role;
+            """, )
+            self.conn.commit()
+            print("Champion stats populated successfully.")
+        except Exception as e:
+            print(f"Error populating champion stats: {e}")
+            self.conn.rollback()
+        finally:
+            cur.close()
 
 
     def clear_table(self,table_name):

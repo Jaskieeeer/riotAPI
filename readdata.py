@@ -1,6 +1,7 @@
 import psycopg2
 import sys
 import pandas as pd
+import table_handler
 def connect_database():
     """Connects to the PostgreSQL database."""
     with open("./passy/passy.txt", "r") as f:
@@ -46,14 +47,25 @@ def save_match_participants_to_csv():
     query = ("SELECT * FROM match_participants")
     df = pd.read_sql(query, conn)
     df.to_csv("match_participants.csv")
+def count_roles():
+    query = ("SELECT role, COUNT(*) FROM match_participants GROUP BY role")
+    df = pd.read_sql(query, conn)
+    print(df)
+count_roles()
+table_handler = table_handler.TableHandler(conn)
+table_handler.create_tables()
+table_handler.populate_champion_stats()
 
 df = pd.read_sql(query, conn)
 query2 = ("SELECT * FROM match_data")
 df2 = pd.read_sql(query2, conn)
 df3 = pd.read_sql("SELECT * FROM match_participants", conn)
+query4 = ("SELECT * FROM champion_stats where games_played > 50 order by avg_kda desc")
+df4 = pd.read_sql(query4, conn)
 print(df)
 print(df2)
 print(df3)
+print(df4)
 save_data_to_csv()
 save_match_data_to_csv()
 save_match_participants_to_csv()

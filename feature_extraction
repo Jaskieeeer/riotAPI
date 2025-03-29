@@ -1,0 +1,74 @@
+import pandas as pd
+import db_handler
+class FeatureExtractor:
+    def __init__(self, db_conn):
+        self.conn = db_conn
+
+    def get_match_data(self):
+        """Fetch match data from the database."""
+        query = """
+            SELECT match_id, winner_team FROM match_data
+        """
+        return pd.read_sql(query, self.conn)
+
+    def get_participant_data(self):
+        """Fetch participant data from the database."""
+        query = """
+            SELECT match_id, puuid, champion, team 
+            FROM match_participants
+        """
+        return pd.read_sql(query, self.conn)
+
+    def calculate_win_rates(self):
+        """Compute champion win rates based on past matches."""
+        query = """
+            SELECT champion, COUNT(*) AS games_played,
+                SUM(CASE WHEN team = winner_team THEN 1 ELSE 0 END) AS wins
+            FROM match_participants
+            JOIN match_data USING (match_id)
+            GROUP BY champion
+        """
+        df = pd.read_sql(query, self.conn)
+        df["win_rate"] = df["wins"] / df["games_played"]
+        return df.set_index("champion")["win_rate"].to_dict()
+
+    def extract_features(self):
+        """Create dataset with rank, champion win rates, synergy, and counter info."""
+        match_data = self.get_match_data()
+        participants = self.get_participant_data()
+        win_rates = self.calculate_win_rates()
+
+        features = []
+        for match_id, group in participants.groupby("match_id"):
+            blue_team = group[group["team"] == 1]["champion"].tolist()
+            red_team = group[group["team"] == 2]["champion"].tolist()
+
+            # Compute team win rates
+            blue_win_rates = [win_rates.get(champ, 0.5) for champ in blue_team]
+            red_win_rates = [win_rates.get(champ, 0.5) for champ in red_team]
+
+            # Compute synergy & counter features (placeholder, add real logic)
+            synergy_score = sum(blue_win_rates) - sum(red_win_rates)
+            counter_score = sum(red_win_rates) - sum(blue_win_rates)
+
+            # Get match outcome
+            winner = match_data.loc[match_data["match_id"] == match_id, "winner_team"].values[0]
+
+            features.append({
+                "match_id": match_id,
+                "blue_win_rate_avg": sum(blue_win_rates) / len(blue_win_rates),
+                "red_win_rate_avg": sum(red_win_rates) / len(red_win_rates),
+                "synergy_score": synergy_score,
+                "counter_score": counter_score,
+                "winner": winner
+            })
+
+        return pd.DataFrame(features)
+
+db_conn = db_handler.connect_database()
+extractor = FeatureExtractor(db_conn)
+print(extractor.calculate_win_rates())
+dataset = extractor.extract_features()
+print(dataset.head())
+
+
